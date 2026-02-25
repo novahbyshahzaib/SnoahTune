@@ -1,0 +1,3 @@
+-keep class com.snoahtune.app.** { *; }
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
