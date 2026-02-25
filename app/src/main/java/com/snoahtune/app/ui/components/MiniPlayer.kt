@@ -35,9 +35,7 @@ fun MiniPlayer(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .border(topStart = 2.dp, topEnd = 2.dp, bottomStart = 0.dp, bottomEnd = 0.dp,
-                    brush = androidx.compose.ui.graphics.SolidColor(BorderBlack),
-                    shape = androidx.compose.foundation.shape.RectangleShape)
+            .border(2.dp, BorderBlack)
             .background(ElectricYellow)
             .clickable(onClick = onClick)
             .pointerInput(Unit) {
@@ -51,11 +49,16 @@ fun MiniPlayer(
             }
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(8.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                Modifier.size(48.dp).border(2.dp, BorderBlack).background(TextSecondary)
+                Modifier
+                    .size(48.dp)
+                    .border(2.dp, BorderBlack)
+                    .background(TextSecondary)
             ) {
                 AsyncImage(
                     model = "content://media/external/audio/albumart/${song.albumId}",
@@ -91,8 +94,14 @@ fun MiniPlayer(
                 )
             }
         }
+
         // Progress bar
-        Box(Modifier.fillMaxWidth().height(3.dp).background(BorderBlack.copy(alpha = 0.3f))) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(BorderBlack.copy(alpha = 0.2f))
+        ) {
             Box(
                 Modifier
                     .fillMaxWidth(progress.coerceIn(0f, 1f))
@@ -102,11 +111,3 @@ fun MiniPlayer(
         }
     }
 }
-
-// Extension for border only on certain sides
-@Composable
-private fun Modifier.border(
-    topStart: Dp, topEnd: Dp, bottomStart: Dp, bottomEnd: Dp,
-    brush: androidx.compose.ui.graphics.Brush,
-    shape: androidx.compose.ui.graphics.Shape
-): Modifier = this
