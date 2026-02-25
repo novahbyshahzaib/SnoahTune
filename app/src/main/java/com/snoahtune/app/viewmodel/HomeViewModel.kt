@@ -2,6 +2,7 @@ package com.snoahtune.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.snoahtune.app.data.local.entities.PlaylistEntity
 import com.snoahtune.app.domain.model.Album
 import com.snoahtune.app.domain.model.Song
 import com.snoahtune.app.domain.repository.MusicRepository
@@ -23,20 +24,23 @@ class HomeViewModel @Inject constructor(
     private val repository: MusicRepository
 ) : ViewModel() {
 
-    private val _allSongs = MutableStateFlow<List<Song>>(emptyList())
+    private val _allSongs   = MutableStateFlow<List<Song>>(emptyList())
     val allSongs: StateFlow<List<Song>> = _allSongs
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    private val _sortOrder = MutableStateFlow(SortOrder.DATE_ADDED_DESC)
+    private val _sortOrder   = MutableStateFlow(SortOrder.DATE_ADDED_DESC)
     val sortOrder: StateFlow<SortOrder> = _sortOrder
 
-    private val _albums = MutableStateFlow<List<Album>>(emptyList())
+    private val _albums      = MutableStateFlow<List<Album>>(emptyList())
     val albums: StateFlow<List<Album>> = _albums
 
-    private val _isLoading = MutableStateFlow(true)
+    private val _isLoading   = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _playlists   = MutableStateFlow<List<PlaylistEntity>>(emptyList())
+    val playlists: StateFlow<List<PlaylistEntity>> = _playlists
 
     val filteredSongs: StateFlow<List<Song>> =
         combine(_allSongs, _searchQuery, _sortOrder) { songs, query, sort ->
@@ -49,13 +53,13 @@ class HomeViewModel @Inject constructor(
                 }
                 .let { filtered ->
                     when (sort) {
-                        SortOrder.NAME_ASC         -> filtered.sortedBy { it.title }
-                        SortOrder.NAME_DESC        -> filtered.sortedByDescending { it.title }
-                        SortOrder.DATE_ADDED_DESC  -> filtered.sortedByDescending { it.dateAdded }
-                        SortOrder.DATE_ADDED_ASC   -> filtered.sortedBy { it.dateAdded }
-                        SortOrder.DURATION_DESC    -> filtered.sortedByDescending { it.duration }
-                        SortOrder.DURATION_ASC     -> filtered.sortedBy { it.duration }
-                        SortOrder.ARTIST           -> filtered.sortedBy { it.artist }
+                        SortOrder.NAME_ASC        -> filtered.sortedBy { it.title }
+                        SortOrder.NAME_DESC       -> filtered.sortedByDescending { it.title }
+                        SortOrder.DATE_ADDED_DESC -> filtered.sortedByDescending { it.dateAdded }
+                        SortOrder.DATE_ADDED_ASC  -> filtered.sortedBy { it.dateAdded }
+                        SortOrder.DURATION_DESC   -> filtered.sortedByDescending { it.duration }
+                        SortOrder.DURATION_ASC    -> filtered.sortedBy { it.duration }
+                        SortOrder.ARTIST          -> filtered.sortedBy { it.artist }
                     }
                 }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -71,17 +75,40 @@ class HomeViewModel @Inject constructor(
                 _isLoading.value = false
             }
         }
+        viewModelScope.launch {
+            repository.getAllPlaylists().collect { _playlists.value = it }
+        }
     }
 
     fun refreshSongs() {
         viewModelScope.launch {
             _isLoading.value = true
             repository.refreshSongs()
-            _albums.value = kotlinx.coroutines.withContext(Dispatchers.IO) { repository.getAlbums() }
+            _albums.value = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                repository.getAlbums()
+            }
             _isLoading.value = false
         }
     }
 
     fun setSearchQuery(q: String) { _searchQuery.value = q }
     fun setSortOrder(s: SortOrder) { _sortOrder.value = s }
+
+    // ── Playlist operations ─────────────────────────────────────
+    fun createPlaylist(name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch { repository.createPlaylist(name.trim()) }
+    }
+
+    fun deletePlaylist(playlist: PlaylistEntity) {
+        viewModelScope.launch { repository.deletePlaylist(playlist) }
+    }
+
+    fun addSongToPlaylist(playlistId: Int, songId: Long) {
+        viewModelScope.launch { repository.addSongToPlaylist(playlistId, songId) }
+    }
+
+    fun renamePlaylist(id: Int, name: String) {
+        viewModelScope.launch { repository.renamePlaylist(id, name) }
+    }
 }
