@@ -13,7 +13,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.snoahtune.app.domain.model.Song
 import com.snoahtune.app.ui.theme.*
 
@@ -32,29 +32,58 @@ fun SongItem(
         onClick = onClick
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Album art
+            // Album art with fallback music note icon
             Box(
                 Modifier
                     .size(56.dp)
                     .border(2.dp, BorderBlack)
-                    .background(ElectricYellow)
+                    .background(ElectricYellow),
+                contentAlignment = Alignment.Center
             ) {
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = "content://media/external/audio/albumart/${song.albumId}",
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    loading = {
+                        // Show music note while loading
+                        Icon(
+                            Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = BorderBlack,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    },
+                    error = {
+                        // Show music note if no album art exists
+                        Icon(
+                            Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = BorderBlack,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 )
+                // Playing indicator overlay
                 if (isPlaying) {
                     Box(
-                        Modifier.fillMaxSize().background(ElectricYellow.copy(alpha = 0.8f)),
+                        Modifier
+                            .fillMaxSize()
+                            .background(ElectricYellow.copy(alpha = 0.85f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.VolumeUp, null, tint = BorderBlack, modifier = Modifier.size(24.dp))
+                        Icon(
+                            Icons.Default.VolumeUp,
+                            contentDescription = null,
+                            tint = BorderBlack,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
+
             Spacer(Modifier.width(12.dp))
+
             Column(Modifier.weight(1f)) {
                 Text(
                     text = song.title,
@@ -71,6 +100,7 @@ fun SongItem(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+
             IconButton(onClick = onMoreClick) {
                 Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = BorderBlack)
             }
