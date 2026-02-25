@@ -1,6 +1,5 @@
 package com.snoahtune.app.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,18 +23,20 @@ import com.snoahtune.app.viewmodel.SortOrder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    homeVM: HomeViewModel,
-    playerVM: PlayerViewModel
-) {
+fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
     val songs       by homeVM.filteredSongs.collectAsState()
     val query       by homeVM.searchQuery.collectAsState()
     val loading     by homeVM.isLoading.collectAsState()
     val currentSong by playerVM.currentSong.collectAsState()
     val isPlaying   by playerVM.isPlaying.collectAsState()
+    val playlists   by homeVM.playlists.collectAsState()
 
-    var showSortSheet  by remember { mutableStateOf(false) }
-    var showOptionsFor by remember { mutableStateOf<Song?>(null) }
+    var showSortSheet    by remember { mutableStateOf(false) }
+    var showOptionsFor   by remember { mutableStateOf<Song?>(null) }
+    var showAddToPlaylist by remember { mutableStateOf(false) }
+    var songForPlaylist  by remember { mutableStateOf<Song?>(null) }
+    var newPlaylistName  by remember { mutableStateOf("") }
+    var showNewPlaylist  by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(Background)) {
 
@@ -49,11 +50,9 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "SNOAHTUNE",
+            Text("SNOAHTUNE",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold
-            )
+                fontWeight = FontWeight.ExtraBold)
             IconButton(onClick = { homeVM.refreshSongs() }) {
                 Icon(Icons.Default.Refresh, "Refresh", tint = BorderBlack)
             }
@@ -84,10 +83,8 @@ fun HomeScreen(
                 )
             }
             if (query.isNotEmpty()) {
-                IconButton(
-                    onClick = { homeVM.setSearchQuery("") },
-                    modifier = Modifier.size(24.dp)
-                ) {
+                IconButton(onClick = { homeVM.setSearchQuery("") },
+                    modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Default.Close, null, tint = TextSecondary)
                 }
             }
@@ -99,11 +96,9 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "${songs.size} SONGS",
+            Text("${songs.size} SONGS",
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.ExtraBold
-            )
+                fontWeight = FontWeight.ExtraBold)
             TextButton(onClick = { showSortSheet = true }) {
                 Icon(Icons.Default.Sort, null, tint = ElectricBlue)
                 Spacer(Modifier.width(4.dp))
@@ -114,44 +109,35 @@ fun HomeScreen(
 
         // Song List
         when {
-            loading -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = ElectricBlue)
-                }
+            loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = ElectricBlue)
             }
-            songs.isEmpty() -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("NO SONGS FOUND", fontWeight = FontWeight.ExtraBold,
-                        color = TextSecondary)
-                }
+            songs.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("NO SONGS FOUND", fontWeight = FontWeight.ExtraBold, color = TextSecondary)
             }
-            else -> {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(songs, key = { it.id }) { song ->
-                        SongItem(
-                            song = song,
-                            isPlaying = currentSong?.id == song.id && isPlaying,
-                            onClick = { playerVM.playSong(song, songs) },
-                            onMoreClick = { showOptionsFor = song }
-                        )
-                    }
-                    item { Spacer(Modifier.height(140.dp)) }
+            else -> LazyColumn(Modifier.fillMaxSize()) {
+                items(songs, key = { it.id }) { song ->
+                    SongItem(
+                        song = song,
+                        isPlaying = currentSong?.id == song.id && isPlaying,
+                        onClick = { playerVM.playSong(song, songs) },
+                        onMoreClick = { showOptionsFor = song }
+                    )
                 }
+                item { Spacer(Modifier.height(140.dp)) }
             }
         }
     }
 
-    // Sort Bottom Sheet
+    // ── Sort Sheet ───────────────────────────────────────────────
     if (showSortSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showSortSheet = false },
-            containerColor = Background
-        ) {
+        ModalBottomSheet(onDismissRequest = { showSortSheet = false },
+            containerColor = Background) {
             Column(Modifier.padding(16.dp)) {
                 Text("SORT BY", fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(12.dp))
-                val opts = listOf(
+                listOf(
                     "Date Added (Newest)" to SortOrder.DATE_ADDED_DESC,
                     "Date Added (Oldest)" to SortOrder.DATE_ADDED_ASC,
                     "Name A–Z"            to SortOrder.NAME_ASC,
@@ -159,12 +145,9 @@ fun HomeScreen(
                     "Duration (Longest)"  to SortOrder.DURATION_DESC,
                     "Duration (Shortest)" to SortOrder.DURATION_ASC,
                     "Artist Name"         to SortOrder.ARTIST
-                )
-                opts.forEach { (label, order) ->
-                    TextButton(
-                        onClick = { homeVM.setSortOrder(order); showSortSheet = false },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                ).forEach { (label, order) ->
+                    TextButton(onClick = { homeVM.setSortOrder(order); showSortSheet = false },
+                        modifier = Modifier.fillMaxWidth()) {
                         Text(label.uppercase(), fontWeight = FontWeight.Bold, color = BorderBlack)
                     }
                 }
@@ -173,36 +156,141 @@ fun HomeScreen(
         }
     }
 
-    // Options Sheet
+    // ── Song Options Sheet ───────────────────────────────────────
     showOptionsFor?.let { song ->
-        ModalBottomSheet(
-            onDismissRequest = { showOptionsFor = null },
-            containerColor = Background
-        ) {
+        ModalBottomSheet(onDismissRequest = { showOptionsFor = null },
+            containerColor = Background) {
             Column(Modifier.padding(16.dp)) {
                 Text(song.title, fontWeight = FontWeight.ExtraBold,
-                    style = MaterialTheme.typography.titleMedium)
+                    style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 Text(song.artist, style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary)
                 Spacer(Modifier.height(16.dp))
-                TextButton(
-                    onClick = { playerVM.playSong(song, songs); showOptionsFor = null },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Divider(color = BorderBlack, thickness = 2.dp)
+                Spacer(Modifier.height(8.dp))
+
+                // Play
+                TextButton(onClick = { playerVM.playSong(song, songs); showOptionsFor = null },
+                    modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.PlayArrow, null, tint = BorderBlack)
                     Spacer(Modifier.width(12.dp))
-                    Text("PLAY", fontWeight = FontWeight.Bold, color = BorderBlack)
+                    Text("PLAY NOW", fontWeight = FontWeight.Bold, color = BorderBlack,
+                        modifier = Modifier.fillMaxWidth())
                 }
-                TextButton(
-                    onClick = { playerVM.toggleFavorite(); showOptionsFor = null },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Favorite, null, tint = BorderBlack)
+                // Favorite
+                TextButton(onClick = {
+                    playerVM.playSong(song, songs)
+                    playerVM.toggleFavorite()
+                    showOptionsFor = null
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Favorite, null, tint = HotPink)
                     Spacer(Modifier.width(12.dp))
-                    Text("ADD TO FAVORITES", fontWeight = FontWeight.Bold, color = BorderBlack)
+                    Text("ADD TO FAVORITES", fontWeight = FontWeight.Bold, color = BorderBlack,
+                        modifier = Modifier.fillMaxWidth())
+                }
+                // Add to Playlist
+                TextButton(onClick = {
+                    songForPlaylist = song
+                    showOptionsFor = null
+                    showAddToPlaylist = true
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.PlaylistAdd, null, tint = ElectricBlue)
+                    Spacer(Modifier.width(12.dp))
+                    Text("ADD TO PLAYLIST", fontWeight = FontWeight.Bold, color = BorderBlack,
+                        modifier = Modifier.fillMaxWidth())
                 }
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+
+    // ── Add to Playlist Sheet ────────────────────────────────────
+    if (showAddToPlaylist) {
+        ModalBottomSheet(onDismissRequest = { showAddToPlaylist = false },
+            containerColor = Background) {
+            Column(Modifier.padding(16.dp)) {
+                Text("ADD TO PLAYLIST", fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(12.dp))
+
+                // Create new playlist option
+                TextButton(onClick = { showNewPlaylist = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(LimeGreen)
+                        .border(2.dp, BorderBlack)) {
+                    Icon(Icons.Default.Add, null, tint = BorderBlack)
+                    Spacer(Modifier.width(8.dp))
+                    Text("+ CREATE NEW PLAYLIST", fontWeight = FontWeight.ExtraBold,
+                        color = BorderBlack)
+                }
+                Spacer(Modifier.height(8.dp))
+
+                if (playlists.isEmpty()) {
+                    Text("No playlists yet. Create one above!",
+                        color = TextSecondary, style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(8.dp))
+                } else {
+                    playlists.forEach { playlist ->
+                        TextButton(
+                            onClick = {
+                                songForPlaylist?.let { song ->
+                                    homeVM.addSongToPlaylist(playlist.id, song.id)
+                                }
+                                showAddToPlaylist = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.PlaylistPlay, null, tint = ElectricBlue)
+                            Spacer(Modifier.width(12.dp))
+                            Text(playlist.name, fontWeight = FontWeight.Bold, color = BorderBlack,
+                                modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+
+    // ── New Playlist Dialog ──────────────────────────────────────
+    if (showNewPlaylist) {
+        AlertDialog(
+            onDismissRequest = { showNewPlaylist = false; newPlaylistName = "" },
+            containerColor = SurfaceWhite,
+            title = {
+                Text("NEW PLAYLIST", fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp)
+            },
+            text = {
+                OutlinedTextField(
+                    value = newPlaylistName,
+                    onValueChange = { newPlaylistName = it },
+                    label = { Text("Playlist name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (newPlaylistName.isNotBlank()) {
+                        homeVM.createPlaylist(newPlaylistName)
+                        songForPlaylist?.let { song ->
+                            // Will add to newly created playlist - slight delay for DB
+                        }
+                        newPlaylistName = ""
+                        showNewPlaylist = false
+                        showAddToPlaylist = false
+                    }
+                }) {
+                    Text("CREATE", fontWeight = FontWeight.ExtraBold, color = ElectricBlue)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNewPlaylist = false; newPlaylistName = "" }) {
+                    Text("CANCEL", color = TextSecondary)
+                }
+            }
+        )
     }
 }
