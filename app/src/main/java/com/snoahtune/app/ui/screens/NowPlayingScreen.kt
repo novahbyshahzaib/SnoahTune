@@ -1,27 +1,30 @@
 package com.snoahtune.app.ui.screens
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import androidx.media3.common.Player
 import coil.compose.AsyncImage
-import com.snoahtune.app.ui.components.NeuButton
 import com.snoahtune.app.ui.theme.*
 import com.snoahtune.app.viewmodel.PlayerViewModel
-import androidx.media3.common.Player
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NowPlayingScreen(
     playerVM: PlayerViewModel,
@@ -35,19 +38,28 @@ fun NowPlayingScreen(
     val shuffle    by playerVM.shuffleEnabled.collectAsState()
     val repeatMode by playerVM.repeatMode.collectAsState()
     val speed      by playerVM.playbackSpeed.collectAsState()
+
     var showSpeedSheet by remember { mutableStateOf(false) }
     var dragX by remember { mutableFloatStateOf(0f) }
 
     if (song == null) {
-        Box(Modifier.fillMaxSize().background(Background), Alignment.Center) {
-            Text("NO SONG PLAYING", fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Background),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "NO SONG PLAYING",
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 2.sp,
+                color = TextSecondary
+            )
         }
         return
     }
 
     val s = song!!
-    val duration = (progress * (position.toFloat() / progress.coerceAtLeast(0.001f))).toLong()
-        .takeIf { progress > 0f } ?: 0L
 
     Column(
         Modifier
@@ -57,26 +69,37 @@ fun NowPlayingScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Back bar
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
+
+        // ── Top Bar ──────────────────────────────────────────────
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.KeyboardArrowDown, "Back", modifier = Modifier.size(32.dp))
+                Icon(
+                    Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Back",
+                    modifier = Modifier.size(32.dp)
+                )
             }
-            Text("NOW PLAYING", fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp,
-                 style = MaterialTheme.typography.labelSmall)
+            Text(
+                "NOW PLAYING",
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 2.sp,
+                style = MaterialTheme.typography.labelSmall
+            )
             IconButton(onClick = {}) {
-                Icon(Icons.Default.MoreVert, null)
+                Icon(Icons.Default.MoreVert, contentDescription = null)
             }
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // Album art — Neu Brutalism style with shadow, slight rotation
+        // ── Album Art ─────────────────────────────────────────────
         Box(
             Modifier
-                .size(280.dp)
-                .padding(8.dp)
+                .size(300.dp)
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragEnd = {
@@ -85,23 +108,24 @@ fun NowPlayingScreen(
                             dragX = 0f
                         }
                     ) { _, delta -> dragX += delta }
-                }
+                },
+            contentAlignment = Alignment.Center
         ) {
-            // Shadow
+            // Shadow block
             Box(
                 Modifier
-                    .size(256.dp)
+                    .size(260.dp)
                     .offset(x = 6.dp, y = 6.dp)
-                    .background(BorderBlack)
                     .rotate(-2f)
+                    .background(BorderBlack)
             )
-            // Art
+            // Art box
             Box(
                 Modifier
-                    .size(256.dp)
+                    .size(260.dp)
+                    .rotate(-2f)
                     .border(3.dp, BorderBlack)
                     .background(ElectricYellow)
-                    .rotate(-2f)
             ) {
                 AsyncImage(
                     model = "content://media/external/audio/albumart/${s.albumId}",
@@ -114,10 +138,11 @@ fun NowPlayingScreen(
 
         Spacer(Modifier.height(28.dp))
 
-        // Song info
+        // ── Song Info ─────────────────────────────────────────────
         Text(
             s.title,
-            style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.ExtraBold),
+            style = MaterialTheme.typography.displayLarge,
+            fontWeight = FontWeight.ExtraBold,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -138,17 +163,21 @@ fun NowPlayingScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // Favorite + Speed
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        // ── Action Row ────────────────────────────────────────────
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             IconButton(onClick = { playerVM.toggleFavorite() }) {
                 Icon(
                     if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    "Favorite",
+                    contentDescription = "Favorite",
                     tint = if (isFavorite) HotPink else BorderBlack,
                     modifier = Modifier.size(28.dp)
                 )
             }
-            IconButton(onClick = { showSpeedSheet = true }) {
+            TextButton(onClick = { showSpeedSheet = true }) {
                 Text(
                     "${speed}x",
                     fontWeight = FontWeight.ExtraBold,
@@ -157,17 +186,22 @@ fun NowPlayingScreen(
                 )
             }
             IconButton(onClick = {}) {
-                Icon(Icons.Default.Equalizer, "EQ", tint = BorderBlack, modifier = Modifier.size(28.dp))
+                Icon(
+                    Icons.Default.Equalizer,
+                    contentDescription = "EQ",
+                    tint = BorderBlack,
+                    modifier = Modifier.size(28.dp)
+                )
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
 
-        // Seek Bar
+        // ── Seek Bar ──────────────────────────────────────────────
         Column(Modifier.fillMaxWidth()) {
             Slider(
                 value = progress.coerceIn(0f, 1f),
-                onValueChange = playerVM::seekTo,
+                onValueChange = { playerVM.seekTo(it) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = SliderDefaults.colors(
                     thumbColor = BorderBlack,
@@ -175,41 +209,59 @@ fun NowPlayingScreen(
                     inactiveTrackColor = BorderBlack.copy(alpha = 0.2f)
                 )
             )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(PlayerViewModel.msToString(position),
-                     style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-                Text(PlayerViewModel.msToString(s.duration),
-                     style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    PlayerViewModel.msToString(position),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary
+                )
+                Text(
+                    PlayerViewModel.msToString(s.duration),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary
+                )
             }
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // Controls
+        // ── Playback Controls ─────────────────────────────────────
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Shuffle
             IconButton(onClick = { playerVM.toggleShuffle() }) {
                 Icon(
-                    Icons.Default.Shuffle, "Shuffle",
+                    Icons.Default.Shuffle,
+                    contentDescription = "Shuffle",
                     tint = if (shuffle) HotPink else TextSecondary,
                     modifier = Modifier.size(28.dp)
                 )
             }
+
+            // Previous
             Box(
                 Modifier
-                    .size(56.dp)
-                    .background(BorderBlack)
-                    .border(0.dp, BorderBlack),
+                    .size(52.dp)
+                    .background(BorderBlack),
                 contentAlignment = Alignment.Center
             ) {
                 IconButton(onClick = { playerVM.skipPrevious() }) {
-                    Icon(Icons.Default.SkipPrevious, null, tint = ElectricYellow, modifier = Modifier.size(36.dp))
+                    Icon(
+                        Icons.Default.SkipPrevious,
+                        contentDescription = null,
+                        tint = ElectricYellow,
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
             }
-            // Big Play button
+
+            // Play / Pause
             Box(
                 Modifier
                     .size(72.dp)
@@ -220,46 +272,66 @@ fun NowPlayingScreen(
             ) {
                 Icon(
                     if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    null,
+                    contentDescription = null,
                     tint = BorderBlack,
                     modifier = Modifier.size(44.dp)
                 )
             }
+
+            // Next
             Box(
-                Modifier.size(56.dp).background(BorderBlack),
+                Modifier
+                    .size(52.dp)
+                    .background(BorderBlack),
                 contentAlignment = Alignment.Center
             ) {
                 IconButton(onClick = { playerVM.skipNext() }) {
-                    Icon(Icons.Default.SkipNext, null, tint = ElectricYellow, modifier = Modifier.size(36.dp))
+                    Icon(
+                        Icons.Default.SkipNext,
+                        contentDescription = null,
+                        tint = ElectricYellow,
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
             }
+
+            // Repeat
             IconButton(onClick = { playerVM.toggleRepeat() }) {
                 Icon(
                     when (repeatMode) {
                         Player.REPEAT_MODE_ONE -> Icons.Default.RepeatOne
-                        else                   -> Icons.Default.Repeat
+                        else -> Icons.Default.Repeat
                     },
-                    "Repeat",
+                    contentDescription = "Repeat",
                     tint = if (repeatMode != Player.REPEAT_MODE_OFF) HotPink else TextSecondary,
                     modifier = Modifier.size(28.dp)
                 )
             }
         }
 
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(48.dp))
     }
 
-    // ── Speed Sheet ──────────────────────────────────────────────
+    // ── Speed Bottom Sheet ────────────────────────────────────────
     if (showSpeedSheet) {
-        ModalBottomSheet(onDismissRequest = { showSpeedSheet = false }, containerColor = Background) {
+        ModalBottomSheet(
+            onDismissRequest = { showSpeedSheet = false },
+            containerColor = Background
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("PLAYBACK SPEED", fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp,
-                     style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "PLAYBACK SPEED",
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp,
+                    style = MaterialTheme.typography.titleMedium
+                )
                 Spacer(Modifier.height(12.dp))
-                val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
-                speeds.forEach { spd ->
+                listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f).forEach { spd ->
                     TextButton(
-                        onClick = { playerVM.setPlaybackSpeed(spd); showSpeedSheet = false },
+                        onClick = {
+                            playerVM.setPlaybackSpeed(spd)
+                            showSpeedSheet = false
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
