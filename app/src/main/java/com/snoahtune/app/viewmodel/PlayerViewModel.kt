@@ -27,7 +27,7 @@ class PlayerViewModel @Inject constructor(
 
     private var player: Player? = null
 
-    private val _currentSong  = MutableStateFlow<Song?>(null)
+    private val _currentSong   = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong
 
     private val _isPlaying     = MutableStateFlow(false)
@@ -54,6 +54,10 @@ class PlayerViewModel @Inject constructor(
     private val _isFavorite    = MutableStateFlow(false)
     val isFavorite: StateFlow<Boolean> = _isFavorite
 
+    // Slowed + Reverb: when ON, pitch matches speed (lower pitch = dreamy slowed sound)
+    private val _slowedReverbOn = MutableStateFlow(false)
+    val slowedReverbOn: StateFlow<Boolean> = _slowedReverbOn
+
     fun connectToService() {
         val token = SessionToken(context, ComponentName(context, MusicService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
@@ -69,9 +73,7 @@ class PlayerViewModel @Inject constructor(
             override fun onIsPlayingChanged(isPlaying: Boolean) { _isPlaying.value = isPlaying }
             override fun onRepeatModeChanged(mode: Int)         { _repeatMode.value = mode }
             override fun onShuffleModeEnabledChanged(on: Boolean) { _shuffleOn.value = on }
-            override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
-                syncCurrentSong()
-            }
+            override fun onMediaItemTransition(item: MediaItem?, reason: Int) { syncCurrentSong() }
         })
     }
 
@@ -111,7 +113,9 @@ class PlayerViewModel @Inject constructor(
                         .setTitle(s.title)
                         .setArtist(s.artist)
                         .setAlbumTitle(s.album)
-                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                        .setArtworkUri(
+                            Uri.parse("content://media/external/audio/albumart/${s.albumId}")
+                        )
                         .build()
                 )
                 .build()
@@ -135,7 +139,9 @@ class PlayerViewModel @Inject constructor(
         player?.let { it.seekTo((it.duration * fraction).toLong()) }
     }
 
-    fun toggleShuffle() { player?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }
+    fun toggleShuffle() {
+        player?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
+    }
 
     fun toggleRepeat() {
         player?.let {
@@ -148,8 +154,25 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun setPlaybackSpeed(speed: Float) {
-        player?.playbackParameters = PlaybackParameters(speed)
         _playbackSpeed.value = speed
+        applyPlaybackParameters()
+    }
+
+    /**
+     * Toggle Slowed + Reverb mode.
+     * When ON:  pitch follows speed — slowing down also lowers pitch (dreamy slowed sound).
+     * When OFF: pitch is always 1.0 regardless of speed (normal time-stretch, voice unchanged).
+     */
+    fun toggleSlowedReverb() {
+        _slowedReverbOn.value = !_slowedReverbOn.value
+        applyPlaybackParameters()
+    }
+
+    private fun applyPlaybackParameters() {
+        val speed = _playbackSpeed.value
+        // When slowed+reverb is ON, pitch = speed value so lowering speed lowers pitch together
+        val pitch = if (_slowedReverbOn.value) speed else 1f
+        player?.playbackParameters = PlaybackParameters(speed, pitch)
     }
 
     fun toggleFavorite() {
