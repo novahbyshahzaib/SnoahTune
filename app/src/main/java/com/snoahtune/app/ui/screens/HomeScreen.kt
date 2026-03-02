@@ -274,10 +274,9 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
             confirmButton = {
                 TextButton(onClick = {
                     if (newPlaylistName.isNotBlank()) {
-                        homeVM.createPlaylist(newPlaylistName)
                         songForPlaylist?.let { song ->
-                            // Will add to newly created playlist - slight delay for DB
-                        }
+                            homeVM.createPlaylistAndAddSong(newPlaylistName, song.id)
+                        } ?: homeVM.createPlaylist(newPlaylistName)
                         newPlaylistName = ""
                         showNewPlaylist = false
                         showAddToPlaylist = false

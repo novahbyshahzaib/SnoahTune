@@ -60,10 +60,17 @@ class MusicRepositoryImpl @Inject constructor(
         playlistDao.addSongToPlaylist(PlaylistSongCrossRef(playlistId, songId))
     }
 
+    override suspend fun removeSongFromPlaylist(playlistId: Int, songId: Long) {
+        playlistDao.removeSongFromPlaylist(PlaylistSongCrossRef(playlistId, songId))
+    }
+
     override fun getPlaylistWithSongs(playlistId: Int) =
         playlistDao.getPlaylistWithSongs(playlistId)
 
     override suspend fun renamePlaylist(id: Int, name: String) {
         playlistDao.renamePlaylist(id, name)
     }
+
+    override suspend fun createPlaylistAndGetId(name: String): Int =
+        playlistDao.createPlaylist(PlaylistEntity(name = name)).toInt()
 }
