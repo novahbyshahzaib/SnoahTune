@@ -126,6 +126,7 @@ class PlayerViewModel @Inject constructor(
             play()
         }
         _currentSong.value = song
+        viewModelScope.launch { repository.recordPlay(song.id) }
         viewModelScope.launch {
             repository.isFavorite(song.id).collect { _isFavorite.value = it }
         }

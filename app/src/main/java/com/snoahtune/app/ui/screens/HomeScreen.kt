@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -30,6 +31,7 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
     val currentSong by playerVM.currentSong.collectAsState()
     val isPlaying   by playerVM.isPlaying.collectAsState()
     val playlists   by homeVM.playlists.collectAsState()
+    val recentlyPlayed by homeVM.recentlyPlayed.collectAsState()
 
     var showSortSheet    by remember { mutableStateOf(false) }
     var showOptionsFor   by remember { mutableStateOf<Song?>(null) }
@@ -87,6 +89,50 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                     modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Default.Close, null, tint = TextSecondary)
                 }
+            }
+        }
+
+        // Recently Played
+        if (recentlyPlayed.isNotEmpty() && query.isBlank()) {
+            Column {
+                Text(
+                    "RECENTLY PLAYED",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(recentlyPlayed, key = { it.id }) { song ->
+                        Column(
+                            modifier = Modifier
+                                .width(80.dp)
+                                .clickable { playerVM.playSong(song, songs) },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(64.dp)
+                                    .background(ElectricBlue)
+                                    .border(2.dp, BorderBlack),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.MusicNote, null,
+                                    tint = SurfaceWhite, modifier = Modifier.size(28.dp))
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(song.title, style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold, maxLines = 1,
+                                modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Divider(color = BorderBlack, thickness = 1.dp,
+                    modifier = Modifier.padding(horizontal = 12.dp))
+                Spacer(Modifier.height(4.dp))
             }
         }
 

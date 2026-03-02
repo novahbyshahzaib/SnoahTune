@@ -20,11 +20,14 @@ object AppModule {
 
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): MusicDatabase =
-        Room.databaseBuilder(ctx, MusicDatabase::class.java, "snoahtune.db").build()
+        Room.databaseBuilder(ctx, MusicDatabase::class.java, "snoahtune.db")
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides @Singleton fun provideSongDao(db: MusicDatabase): SongDao = db.songDao()
     @Provides @Singleton fun providePlaylistDao(db: MusicDatabase): PlaylistDao = db.playlistDao()
     @Provides @Singleton fun provideFavoriteDao(db: MusicDatabase): FavoriteDao = db.favoriteDao()
+    @Provides @Singleton fun provideRecentlyPlayedDao(db: MusicDatabase): RecentlyPlayedDao = db.recentlyPlayedDao()
 
     @Provides @Singleton
     fun provideMediaStore(@ApplicationContext ctx: Context): MediaStoreDataSource =
@@ -35,6 +38,7 @@ object AppModule {
         mediaStore: MediaStoreDataSource,
         songDao: SongDao,
         favoriteDao: FavoriteDao,
-        playlistDao: PlaylistDao
-    ): MusicRepository = MusicRepositoryImpl(mediaStore, songDao, favoriteDao, playlistDao)
+        playlistDao: PlaylistDao,
+        recentlyPlayedDao: RecentlyPlayedDao
+    ): MusicRepository = MusicRepositoryImpl(mediaStore, songDao, favoriteDao, playlistDao, recentlyPlayedDao)
 }
