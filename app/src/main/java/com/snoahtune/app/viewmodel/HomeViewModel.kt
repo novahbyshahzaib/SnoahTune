@@ -68,6 +68,12 @@ class HomeViewModel @Inject constructor(
         repository.getFavoriteSongs()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val recentlyPlayed: StateFlow<List<Song>> =
+        repository.getRecentlyPlayed(10)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun getPlaylistWithSongs(playlistId: Int) = repository.getPlaylistWithSongs(playlistId)
+
     init {
         viewModelScope.launch {
             repository.getAllSongs().collect { songs ->
@@ -112,3 +118,4 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { repository.renamePlaylist(id, name) }
     }
 }
+

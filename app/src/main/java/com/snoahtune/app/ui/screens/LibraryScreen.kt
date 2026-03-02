@@ -11,6 +11,7 @@ import androidx.compose.ui.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.snoahtune.app.data.local.entities.PlaylistEntity
+import com.snoahtune.app.domain.model.Song
 import com.snoahtune.app.ui.components.NeuButton
 import com.snoahtune.app.ui.components.NeuCard
 import com.snoahtune.app.ui.components.SongItem
@@ -32,6 +33,10 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
     var newPlaylistName by remember { mutableStateOf("") }
     var showNewPlaylist by remember { mutableStateOf(false) }
     var selectedPlaylist by remember { mutableStateOf<PlaylistEntity?>(null) }
+    val playlistWithSongs by remember(selectedPlaylist) {
+        selectedPlaylist?.let { homeVM.getPlaylistWithSongs(it.id) }
+            ?: kotlinx.coroutines.flow.flowOf(null)
+    }.collectAsState(initial = null)
 
     Column(Modifier.fillMaxSize().background(Background)) {
 
@@ -306,6 +311,11 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
 
     // ── Playlist Songs Bottom Sheet ──────────────────────────────
     selectedPlaylist?.let { playlist ->
+        val playlistSongs: List<Song> = playlistWithSongs?.songs
+            ?.mapNotNull { entity ->
+                songs.find { it.id == entity.id }
+            } ?: emptyList()
+
         ModalBottomSheet(
             onDismissRequest = { selectedPlaylist = null },
             containerColor = Background
@@ -334,8 +344,8 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                 NeuButton(
                     text = "▶ PLAY ALL",
                     onClick = {
-                        if (songs.isNotEmpty()) {
-                            playerVM.playSong(songs.first(), songs)
+                        if (playlistSongs.isNotEmpty()) {
+                            playerVM.playSong(playlistSongs.first(), playlistSongs)
                         }
                         selectedPlaylist = null
                     },
@@ -345,33 +355,45 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
 
                 Spacer(Modifier.height(16.dp))
 
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.MusicNote, null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(40.dp)
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Add songs using the ⋮ menu",
-                            color = TextSecondary,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "on any song in the Home screen",
-                            color = TextSecondary,
-                            style = MaterialTheme.typography.labelSmall
-                        )
+                if (playlistSongs.isEmpty()) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.MusicNote, null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Add songs using the ⋮ menu",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                "on any song in the Home screen",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(Modifier.fillMaxWidth()) {
+                        items(playlistSongs, key = { it.id }) { song ->
+                            SongItem(
+                                song = song,
+                                isPlaying = currSong?.id == song.id && isPlaying,
+                                onClick = { playerVM.playSong(song, playlistSongs) },
+                                onMoreClick = {}
+                            )
+                        }
+                        item { Spacer(Modifier.height(24.dp)) }
                     }
                 }
-
-                Spacer(Modifier.height(24.dp))
             }
         }
     }
