@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -12,8 +13,11 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import coil.compose.SubcomposeAsyncImage
 import com.snoahtune.app.domain.model.Song
 import com.snoahtune.app.ui.components.SongItem
 import com.snoahtune.app.ui.theme.*
@@ -24,12 +28,13 @@ import com.snoahtune.app.viewmodel.SortOrder
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
-    val songs       by homeVM.filteredSongs.collectAsState()
-    val query       by homeVM.searchQuery.collectAsState()
-    val loading     by homeVM.isLoading.collectAsState()
-    val currentSong by playerVM.currentSong.collectAsState()
-    val isPlaying   by playerVM.isPlaying.collectAsState()
-    val playlists   by homeVM.playlists.collectAsState()
+    val songs          by homeVM.filteredSongs.collectAsState()
+    val query          by homeVM.searchQuery.collectAsState()
+    val loading        by homeVM.isLoading.collectAsState()
+    val currentSong    by playerVM.currentSong.collectAsState()
+    val isPlaying      by playerVM.isPlaying.collectAsState()
+    val playlists      by homeVM.playlists.collectAsState()
+    val recentlyPlayed by playerVM.recentlyPlayed.collectAsState()
 
     var showSortSheet    by remember { mutableStateOf(false) }
     var showOptionsFor   by remember { mutableStateOf<Song?>(null) }
@@ -116,6 +121,53 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                 Text("NO SONGS FOUND", fontWeight = FontWeight.ExtraBold, color = TextSecondary)
             }
             else -> LazyColumn(Modifier.fillMaxSize()) {
+
+                // Recently Played section
+                if (recentlyPlayed.isNotEmpty()) {
+                    item {
+                        Column(Modifier.fillMaxWidth()) {
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.History, null,
+                                    tint = ElectricBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "RECENTLY PLAYED",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ElectricBlue
+                                )
+                            }
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(recentlyPlayed, key = { "recent_${it.id}" }) { song ->
+                                    RecentSongCard(
+                                        song = song,
+                                        isPlaying = currentSong?.id == song.id && isPlaying,
+                                        onClick = { playerVM.playSong(song, recentlyPlayed) }
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Divider(
+                                color = BorderBlack.copy(alpha = 0.15f),
+                                thickness = 1.dp,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                        }
+                    }
+                }
+
                 items(songs, key = { it.id }) { song ->
                     SongItem(
                         song = song,
@@ -294,3 +346,64 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
         )
     }
 }
+
+@Composable
+private fun RecentSongCard(song: Song, isPlaying: Boolean, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .width(80.dp)
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            Modifier
+                .size(72.dp)
+                .border(2.dp, BorderBlack)
+                .background(ElectricYellow),
+            contentAlignment = Alignment.Center
+        ) {
+            SubcomposeAsyncImage(
+                model = "content://media/external/audio/albumart/${song.albumId}",
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                loading = {
+                    Icon(Icons.Default.MusicNote, null, tint = BorderBlack,
+                        modifier = Modifier.size(28.dp))
+                },
+                error = {
+                    Icon(Icons.Default.MusicNote, null, tint = BorderBlack,
+                        modifier = Modifier.size(28.dp))
+                }
+            )
+            if (isPlaying) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(ElectricYellow.copy(alpha = 0.85f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.VolumeUp, null, tint = BorderBlack,
+                        modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = song.title,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = if (isPlaying) ElectricBlue else TextPrimary
+        )
+        Text(
+            text = song.artist,
+            style = MaterialTheme.typography.labelSmall,
+            color = TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
