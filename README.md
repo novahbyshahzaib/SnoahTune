@@ -9,39 +9,46 @@ A local music player for Android built with Jetpack Compose, Media3/ExoPlayer, R
 
 ## Installation
 
-### Option 1 – Install the pre-built APK (fastest)
+### Option 1 – Install the pre-built APK ✅ works on Android without a PC
 
-Every push to the `main` branch automatically triggers a GitHub Actions build that uploads a debug APK as a downloadable artifact. No local toolchain is required.
+Every push to the `main` branch automatically triggers a GitHub Actions build that produces a ready-to-install debug APK. All steps below can be completed entirely on your Android device using only a browser and a file manager.
 
-1. Open the repository on GitHub:
+> **Note:** Downloading GitHub Actions artifacts requires a free GitHub account. If you don't have one, create one at <https://github.com/join>.
+
+#### Steps (Android device — no PC needed)
+
+1. **Sign in to GitHub** in your Android browser (Chrome, Firefox, etc.) at
+   `https://github.com/login`
+
+2. Open the repository:
    `https://github.com/novahbyshahzaib/SnoahTune`
 
-2. Click the **Actions** tab at the top of the page.
+3. Tap the **Actions** tab (you may need to request the desktop site in your browser menu if the tab is not visible).
 
-3. In the left sidebar, select the **Build SnoahTune APK** workflow.
+4. In the workflow list on the left, tap **Build SnoahTune APK**.
 
-4. Click the most recent successful run (green check mark).
+5. Tap the most recent run with a green ✅ check mark.
 
-5. Scroll to the **Artifacts** section at the bottom of the run summary page.
+6. Scroll to the **Artifacts** section at the bottom of the page and tap **SnoahTune-debug-apk** to download the ZIP file to your device.
+   > Artifacts are kept for **30 days**. If the artifact has expired, trigger a new build: tap the **Run workflow** drop-down button on the workflow page (while signed in), then confirm by tapping **Run workflow** again.
 
-6. Click **SnoahTune-debug-apk** to download the ZIP archive.
-   > Artifacts are kept for **30 days**. If the latest artifact has expired, trigger a new build manually: go to **Actions → Build SnoahTune APK**, click the **Run workflow** drop-down button, then click the **Run workflow** confirmation button.
+7. **Extract the APK from the ZIP.**  
+   Open your file manager (e.g. *Files by Google*, *Mi File Manager*, *My Files*, or install [ZArchiver](https://play.google.com/store/apps/details?id=ru.zdevs.zarchiver) from the Play Store).  
+   Locate the downloaded ZIP (usually in **Downloads**), tap it, and extract `app-debug.apk` to a folder you can find easily.
 
-7. Extract the ZIP to obtain `app-debug.apk`.
+8. **Allow installation from unknown sources.**  
+   Before opening the APK you need to grant your file manager (or browser) permission to install apps:
+   - Go to **Settings → Apps → Special app access → Install unknown apps**.
+   - Find the file manager or browser you are using and turn on **Allow from this source**.
+   - *(Exact path varies by Android version and manufacturer — on some devices it is under **Settings → Security → Unknown sources**.)*
 
-8. Transfer `app-debug.apk` to your Android device (USB, cloud storage, etc.).
+9. Tap `app-debug.apk` in your file manager and tap **Install**.
 
-9. On your Android device, enable **Install unknown apps** for the app you will use to open the file:
-   - Go to **Settings → Apps → Special app access → Install unknown apps** (exact path varies by manufacturer).
-   - Grant permission to your file manager or browser.
-
-10. Open `app-debug.apk` on the device and tap **Install**.
-
-11. Launch **SnoahTune** from the app drawer.
+10. Launch **SnoahTune** from your app drawer.
 
 ---
 
-### Option 2 – Build and install from source with Android Studio
+### Option 2 – Build and install from source with Android Studio *(requires a PC/laptop)*
 
 #### Prerequisites
 
@@ -86,7 +93,7 @@ Every push to the `main` branch automatically triggers a GitHub Actions build th
 
 ---
 
-### Option 3 – Build and install from source via the command line
+### Option 3 – Build and install from source via the command line *(requires a PC/laptop)*
 
 #### Prerequisites
 
@@ -180,8 +187,11 @@ Grant the storage/audio permission when prompted on first launch to allow the ap
 
 | Problem | Solution |
 |---------|---------|
-| "App not installed" error on device | Ensure **Install unknown apps** is enabled for the source app (see Option 1, step 9). |
+| "App not installed" error on device | Ensure **Install unknown apps** is enabled for the app you used to open the APK (see Option 1, step 8). |
+| Cannot see the Actions tab on mobile | In your browser menu, request the **Desktop site** (or full site) and reload the page. |
+| No "Artifacts" section visible | You must be signed in to GitHub to see and download artifacts. Sign in and reload the page. |
+| Cannot extract the ZIP on Android | Install a file manager that supports ZIP, such as [ZArchiver](https://play.google.com/store/apps/details?id=ru.zdevs.zarchiver) or *Files by Google*. |
 | Gradle sync fails | Verify that `JAVA_HOME` points to JDK 17 and `ANDROID_HOME` points to a valid SDK installation with API 35 installed. |
 | `adb: device not found` | Enable USB debugging on the device, accept the RSA key prompt, and re-run `adb devices`. |
-| Build artifact expired (>30 days) | Trigger a new build via **Actions → Build SnoahTune APK → Run workflow**. |
+| Build artifact expired (>30 days) | Sign in to GitHub, go to **Actions → Build SnoahTune APK**, and trigger a new run with **Run workflow**. |
 | No audio files shown in app | Grant storage/audio permission in **Settings → Apps → SnoahTune → Permissions**. |
