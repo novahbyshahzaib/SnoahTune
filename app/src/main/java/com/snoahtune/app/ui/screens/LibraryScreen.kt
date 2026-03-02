@@ -11,12 +11,14 @@ import androidx.compose.ui.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.snoahtune.app.data.local.entities.PlaylistEntity
+import com.snoahtune.app.domain.model.Song
 import com.snoahtune.app.ui.components.NeuButton
 import com.snoahtune.app.ui.components.NeuCard
 import com.snoahtune.app.ui.components.SongItem
 import com.snoahtune.app.ui.theme.*
 import com.snoahtune.app.viewmodel.HomeViewModel
 import com.snoahtune.app.viewmodel.PlayerViewModel
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +34,10 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
     var newPlaylistName by remember { mutableStateOf("") }
     var showNewPlaylist by remember { mutableStateOf(false) }
     var selectedPlaylist by remember { mutableStateOf<PlaylistEntity?>(null) }
+    var songToRemove by remember { mutableStateOf<Song?>(null) }
+    val playlistSongs by remember(selectedPlaylist?.id) {
+        selectedPlaylist?.let { homeVM.getPlaylistSongs(it.id) } ?: flowOf(emptyList())
+    }.collectAsState(initial = emptyList())
 
     Column(Modifier.fillMaxSize().background(Background)) {
 
@@ -310,18 +316,25 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
             onDismissRequest = { selectedPlaylist = null },
             containerColor = Background
         ) {
-            Column(Modifier.padding(16.dp)) {
+            Column(Modifier.fillMaxHeight(0.8f).padding(horizontal = 16.dp)) {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        playlist.name.uppercase(),
-                        fontWeight = FontWeight.ExtraBold,
-                        style = MaterialTheme.typography.titleMedium,
-                        letterSpacing = 2.sp
-                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            playlist.name.uppercase(),
+                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.titleMedium,
+                            letterSpacing = 2.sp
+                        )
+                        Text(
+                            "${playlistSongs.size} songs",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    }
                     IconButton(onClick = { selectedPlaylist = null }) {
                         Icon(Icons.Default.Close, null)
                     }
@@ -334,8 +347,8 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                 NeuButton(
                     text = "▶ PLAY ALL",
                     onClick = {
-                        if (songs.isNotEmpty()) {
-                            playerVM.playSong(songs.first(), songs)
+                        if (playlistSongs.isNotEmpty()) {
+                            playerVM.playSong(playlistSongs.first(), playlistSongs)
                         }
                         selectedPlaylist = null
                     },
@@ -343,36 +356,80 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                     backgroundColor = ElectricYellow
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.MusicNote, null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(40.dp)
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Add songs using the ⋮ menu",
-                            color = TextSecondary,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "on any song in the Home screen",
-                            color = TextSecondary,
-                            style = MaterialTheme.typography.labelSmall
-                        )
+                if (playlistSongs.isEmpty()) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.MusicNote, null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Add songs using the ⋮ menu",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                "on any song in the Home screen",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(Modifier.weight(1f)) {
+                        items(playlistSongs, key = { it.id }) { song ->
+                            SongItem(
+                                song = song,
+                                isPlaying = currSong?.id == song.id && isPlaying,
+                                onClick = {
+                                    playerVM.playSong(song, playlistSongs)
+                                    selectedPlaylist = null
+                                },
+                                onMoreClick = { songToRemove = song }
+                            )
+                        }
+                        item { Spacer(Modifier.height(24.dp)) }
                     }
                 }
-
-                Spacer(Modifier.height(24.dp))
             }
         }
+    }
+
+    // ── Remove Song Confirmation ─────────────────────────────────
+    songToRemove?.let { song ->
+        AlertDialog(
+            onDismissRequest = { songToRemove = null },
+            containerColor = SurfaceWhite,
+            title = {
+                Text("REMOVE SONG", fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+            },
+            text = {
+                Text("Remove \"${song.title}\" from this playlist?")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    selectedPlaylist?.let { pl ->
+                        homeVM.removeSongFromPlaylist(pl.id, song.id)
+                    }
+                    songToRemove = null
+                }) {
+                    Text("REMOVE", fontWeight = FontWeight.ExtraBold, color = HotPink)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { songToRemove = null }) {
+                    Text("CANCEL", color = TextSecondary)
+                }
+            }
+        )
     }
 }

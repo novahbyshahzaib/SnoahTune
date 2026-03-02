@@ -18,6 +18,8 @@ interface MusicRepository {
     suspend fun createPlaylist(name: String)
     suspend fun deletePlaylist(playlist: PlaylistEntity)
     suspend fun addSongToPlaylist(playlistId: Int, songId: Long)
+    suspend fun removeSongFromPlaylist(playlistId: Int, songId: Long)
     fun getPlaylistWithSongs(playlistId: Int): Flow<PlaylistWithSongs?>
     suspend fun renamePlaylist(id: Int, name: String)
+    suspend fun createPlaylistAndGetId(name: String): Int
 }

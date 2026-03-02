@@ -3,6 +3,7 @@ package com.snoahtune.app.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.snoahtune.app.data.local.entities.PlaylistEntity
+import com.snoahtune.app.data.local.entities.toDomain
 import com.snoahtune.app.domain.model.Album
 import com.snoahtune.app.domain.model.Song
 import com.snoahtune.app.domain.repository.MusicRepository
@@ -107,6 +108,22 @@ class HomeViewModel @Inject constructor(
     fun addSongToPlaylist(playlistId: Int, songId: Long) {
         viewModelScope.launch { repository.addSongToPlaylist(playlistId, songId) }
     }
+
+    fun removeSongFromPlaylist(playlistId: Int, songId: Long) {
+        viewModelScope.launch { repository.removeSongFromPlaylist(playlistId, songId) }
+    }
+
+    fun createPlaylistAndAddSong(name: String, songId: Long) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            val id = repository.createPlaylistAndGetId(name.trim())
+            repository.addSongToPlaylist(id, songId)
+        }
+    }
+
+    fun getPlaylistSongs(playlistId: Int): Flow<List<Song>> =
+        repository.getPlaylistWithSongs(playlistId)
+            .map { it?.songs?.map { songEntity -> songEntity.toDomain() } ?: emptyList() }
 
     fun renamePlaylist(id: Int, name: String) {
         viewModelScope.launch { repository.renamePlaylist(id, name) }
