@@ -20,4 +20,6 @@ interface MusicRepository {
     suspend fun addSongToPlaylist(playlistId: Int, songId: Long)
     fun getPlaylistWithSongs(playlistId: Int): Flow<PlaylistWithSongs?>
     suspend fun renamePlaylist(id: Int, name: String)
+    fun getRecentlyPlayed(): Flow<List<Song>>
+    suspend fun addToRecentlyPlayed(songId: Long)
 }

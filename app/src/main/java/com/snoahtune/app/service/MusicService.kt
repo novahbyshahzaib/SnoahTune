@@ -6,6 +6,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.snoahtune.app.widget.MusicWidgetProvider
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -20,6 +21,19 @@ class MusicService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setId("SnoahTuneSession")
             .build()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val player = mediaSession?.player
+        when (intent?.action) {
+            MusicWidgetProvider.ACTION_PLAY_PAUSE ->
+                player?.let { if (it.isPlaying) it.pause() else it.play() }
+            MusicWidgetProvider.ACTION_NEXT ->
+                player?.seekToNextMediaItem()
+            MusicWidgetProvider.ACTION_PREV ->
+                player?.seekToPreviousMediaItem()
+        }
+        return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =

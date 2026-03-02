@@ -1,5 +1,6 @@
 package com.snoahtune.app.viewmodel
 
+import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
@@ -12,6 +13,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.snoahtune.app.domain.model.Song
 import com.snoahtune.app.domain.repository.MusicRepository
 import com.snoahtune.app.service.MusicService
+import com.snoahtune.app.widget.MusicWidgetProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
@@ -58,6 +60,9 @@ class PlayerViewModel @Inject constructor(
     private val _slowedReverbOn = MutableStateFlow(false)
     val slowedReverbOn: StateFlow<Boolean> = _slowedReverbOn
 
+    val recentlyPlayed: StateFlow<List<Song>> = repository.getRecentlyPlayed()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun connectToService() {
         val token = SessionToken(context, ComponentName(context, MusicService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
@@ -70,10 +75,16 @@ class PlayerViewModel @Inject constructor(
 
     private fun attachListeners() {
         player?.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) { _isPlaying.value = isPlaying }
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                _isPlaying.value = isPlaying
+                updateWidget()
+            }
             override fun onRepeatModeChanged(mode: Int)         { _repeatMode.value = mode }
             override fun onShuffleModeEnabledChanged(on: Boolean) { _shuffleOn.value = on }
-            override fun onMediaItemTransition(item: MediaItem?, reason: Int) { syncCurrentSong() }
+            override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
+                syncCurrentSong()
+                updateWidget()
+            }
         })
     }
 
@@ -129,6 +140,8 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             repository.isFavorite(song.id).collect { _isFavorite.value = it }
         }
+        viewModelScope.launch { repository.addToRecentlyPlayed(song.id) }
+        updateWidget(isPlaying = true, song = song)
     }
 
     fun playPause()    { player?.let { if (it.isPlaying) it.pause() else it.play() } }
@@ -178,6 +191,22 @@ class PlayerViewModel @Inject constructor(
     fun toggleFavorite() {
         _currentSong.value?.let { song ->
             viewModelScope.launch { repository.toggleFavorite(song.id) }
+        }
+    }
+
+    private fun updateWidget(
+        isPlaying: Boolean = _isPlaying.value,
+        song: Song? = _currentSong.value
+    ) {
+        val mgr = AppWidgetManager.getInstance(context)
+        val ids = mgr.getAppWidgetIds(ComponentName(context, MusicWidgetProvider::class.java))
+        ids.forEach { id ->
+            MusicWidgetProvider.updateWidget(
+                context, mgr, id,
+                title = song?.title ?: "SnoahTune",
+                artist = song?.artist ?: "Tap to open",
+                isPlaying = isPlaying
+            )
         }
     }
 

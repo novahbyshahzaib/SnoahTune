@@ -3,6 +3,7 @@ package com.snoahtune.app.data.repository
 import com.snoahtune.app.data.local.MediaStoreDataSource
 import com.snoahtune.app.data.local.dao.FavoriteDao
 import com.snoahtune.app.data.local.dao.PlaylistDao
+import com.snoahtune.app.data.local.dao.RecentlyPlayedDao
 import com.snoahtune.app.data.local.dao.SongDao
 import com.snoahtune.app.data.local.entities.*
 import com.snoahtune.app.domain.model.Album
@@ -18,7 +19,8 @@ class MusicRepositoryImpl @Inject constructor(
     private val mediaStore: MediaStoreDataSource,
     private val songDao: SongDao,
     private val favoriteDao: FavoriteDao,
-    private val playlistDao: PlaylistDao
+    private val playlistDao: PlaylistDao,
+    private val recentlyPlayedDao: RecentlyPlayedDao
 ) : MusicRepository {
 
     override fun getAllSongs(): Flow<List<Song>> =
@@ -65,5 +67,16 @@ class MusicRepositoryImpl @Inject constructor(
 
     override suspend fun renamePlaylist(id: Int, name: String) {
         playlistDao.renamePlaylist(id, name)
+    }
+
+    override fun getRecentlyPlayed(): Flow<List<Song>> =
+        combine(recentlyPlayedDao.getRecentlyPlayed(), songDao.getAllSongs()) { recent, songs ->
+            val songMap = songs.associateBy { it.id }
+            recent.mapNotNull { songMap[it.songId]?.toDomain() }
+        }
+
+    override suspend fun addToRecentlyPlayed(songId: Long) {
+        recentlyPlayedDao.insert(RecentlyPlayedEntity(songId))
+        recentlyPlayedDao.trimToLimit()
     }
 }
