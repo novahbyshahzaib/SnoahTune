@@ -39,14 +39,26 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
+      - name: Rename APK with commit SHA
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             app/build/outputs/apk/debug/SnoahTune-debug-${SHORT_SHA}.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SnoahTune-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: SnoahTune-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/SnoahTune-debug-*.apk
           retention-days: 30
 
-      - name: Build Success
+      - name: Build Summary
         run: |
           echo "✅ SnoahTune APK built successfully!"
-          ls -lh app/build/outputs/apk/debug/
+          echo ""
+          echo "📦 Artifact: SnoahTune-debug-${{ github.sha }}"
+          echo "🔖 Commit:   ${{ env.SHORT_SHA }} (${{ github.ref_name }})"
+          echo "📥 Download: Go to Actions → this run → Artifacts section"
+          echo ""
+          ls -lh app/build/outputs/apk/debug/SnoahTune-debug-*.apk
