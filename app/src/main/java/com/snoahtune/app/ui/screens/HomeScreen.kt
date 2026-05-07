@@ -19,6 +19,7 @@ import com.snoahtune.app.domain.model.Song
 import com.snoahtune.app.ui.components.SongItem
 import com.snoahtune.app.ui.theme.*
 import com.snoahtune.app.viewmodel.HomeViewModel
+import com.snoahtune.app.viewmodel.HomeFilter
 import com.snoahtune.app.viewmodel.PlayerViewModel
 import com.snoahtune.app.viewmodel.SortOrder
 
@@ -32,6 +33,7 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
     val isPlaying   by playerVM.isPlaying.collectAsState()
     val playlists   by homeVM.playlists.collectAsState()
     val recentlyPlayed by homeVM.recentlyPlayed.collectAsState()
+    val homeFilter  by homeVM.homeFilter.collectAsState()
 
     var showSortSheet    by remember { mutableStateOf(false) }
     var showOptionsFor   by remember { mutableStateOf<Song?>(null) }
@@ -89,6 +91,27 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                     modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Default.Close, null, tint = TextSecondary)
                 }
+            }
+        }
+
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 8.dp)
+        ) {
+            val filters = listOf(
+                "ALL" to HomeFilter.ALL,
+                "FAVORITES" to HomeFilter.FAVORITES,
+                "RECENT" to HomeFilter.RECENT
+            )
+            items(filters) { (label, filter) ->
+                FilterChip(
+                    selected = homeFilter == filter,
+                    onClick = { homeVM.setHomeFilter(filter) },
+                    label = { Text(label, fontWeight = FontWeight.Bold) }
+                )
             }
         }
 
@@ -150,6 +173,36 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                 Spacer(Modifier.width(4.dp))
                 Text("SORT", color = ElectricBlue, fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        if (songs.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { playerVM.playSong(songs.first(), songs) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = ElectricYellow)
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, tint = BorderBlack)
+                    Spacer(Modifier.width(6.dp))
+                    Text("PLAY ALL", color = BorderBlack, fontWeight = FontWeight.ExtraBold)
+                }
+                Button(
+                    onClick = {
+                        val shuffled = songs.shuffled()
+                        playerVM.playSong(shuffled.first(), shuffled)
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = ElectricBlue)
+                ) {
+                    Icon(Icons.Default.Shuffle, null, tint = SurfaceWhite)
+                    Spacer(Modifier.width(6.dp))
+                    Text("SHUFFLE", color = SurfaceWhite, fontWeight = FontWeight.ExtraBold)
+                }
             }
         }
 

@@ -15,6 +15,7 @@ import com.snoahtune.app.service.MusicService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -57,6 +58,11 @@ class PlayerViewModel @Inject constructor(
     // Slowed + Reverb: when ON, pitch matches speed (lower pitch = dreamy slowed sound)
     private val _slowedReverbOn = MutableStateFlow(false)
     val slowedReverbOn: StateFlow<Boolean> = _slowedReverbOn
+
+    private val _sleepTimerRemainingMs = MutableStateFlow<Long?>(null)
+    val sleepTimerRemainingMs: StateFlow<Long?> = _sleepTimerRemainingMs
+
+    private var sleepTimerJob: Job? = null
 
     fun connectToService() {
         val token = SessionToken(context, ComponentName(context, MusicService::class.java))
@@ -179,6 +185,43 @@ class PlayerViewModel @Inject constructor(
     fun toggleFavorite() {
         _currentSong.value?.let { song ->
             viewModelScope.launch { repository.toggleFavorite(song.id) }
+        }
+    }
+
+    fun setSleepTimer(minutes: Int?) {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+
+        if (minutes == null) {
+            _sleepTimerRemainingMs.value = null
+            return
+        }
+
+        val durationMs = if (minutes == -1) {
+            val p = player
+            if (p == null || p.duration <= 0) null
+            else (p.duration - p.currentPosition).coerceAtLeast(1000L)
+        } else {
+            (minutes * 60_000L).coerceAtLeast(1000L)
+        }
+
+        if (durationMs == null) {
+            _sleepTimerRemainingMs.value = null
+            return
+        }
+
+        sleepTimerJob = viewModelScope.launch {
+            var remaining = durationMs
+            _sleepTimerRemainingMs.value = remaining
+            while (remaining > 0) {
+                delay(1000)
+                remaining -= 1000
+                _sleepTimerRemainingMs.value = remaining.coerceAtLeast(0)
+            }
+            if (_isPlaying.value) {
+                player?.pause()
+            }
+            _sleepTimerRemainingMs.value = null
         }
     }
 

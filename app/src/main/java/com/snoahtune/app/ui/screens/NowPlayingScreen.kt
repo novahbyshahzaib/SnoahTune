@@ -43,8 +43,10 @@ fun NowPlayingScreen(
     val repeatMode    by playerVM.repeatMode.collectAsState()
     val speed         by playerVM.playbackSpeed.collectAsState()
     val slowedReverb  by playerVM.slowedReverbOn.collectAsState()
+    val sleepRemaining by playerVM.sleepTimerRemainingMs.collectAsState()
 
     var showSpeedSheet   by remember { mutableStateOf(false) }
+    var showSleepTimerSheet by remember { mutableStateOf(false) }
     var showMoreMenu     by remember { mutableStateOf(false) }
     var dragX            by remember { mutableFloatStateOf(0f) }
 
@@ -204,6 +206,15 @@ fun NowPlayingScreen(
                 Icon(Icons.Default.Equalizer, "Equalizer", tint = BorderBlack,
                     modifier = Modifier.size(28.dp))
             }
+
+            IconButton(onClick = { showSleepTimerSheet = true }) {
+                Icon(
+                    Icons.Default.Timer,
+                    "Sleep Timer",
+                    tint = if (sleepRemaining != null) HotPink else BorderBlack,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
 
         // ── Slowed + Reverb Toggle ────────────────────────────────
@@ -241,6 +252,27 @@ fun NowPlayingScreen(
                     uncheckedThumbColor = BorderBlack,
                     uncheckedTrackColor = TextSecondary
                 )
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .background(SurfaceWhite)
+                .border(2.dp, BorderBlack)
+                .clickable { showSleepTimerSheet = true }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("SLEEP TIMER", fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+            Text(
+                sleepRemaining?.let { "IN ${PlayerViewModel.msToString(it)}" } ?: "OFF",
+                color = if (sleepRemaining != null) HotPink else TextSecondary,
+                fontWeight = FontWeight.Bold
             )
         }
 
@@ -338,6 +370,41 @@ fun NowPlayingScreen(
                             fontWeight = if (spd == speed) FontWeight.ExtraBold else FontWeight.Normal,
                             color = if (spd == speed) ElectricBlue else BorderBlack,
                             fontSize = 16.sp)
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+
+    if (showSleepTimerSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSleepTimerSheet = false },
+            containerColor = Background
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    "SLEEP TIMER",
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(Modifier.height(12.dp))
+                listOf(
+                    "OFF" to null,
+                    "15 MINUTES" to 15,
+                    "30 MINUTES" to 30,
+                    "45 MINUTES" to 45,
+                    "END OF SONG" to -1
+                ).forEach { (label, minutes) ->
+                    TextButton(
+                        onClick = {
+                            playerVM.setSleepTimer(minutes)
+                            showSleepTimerSheet = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(label, fontWeight = FontWeight.Bold, color = BorderBlack)
                     }
                 }
                 Spacer(Modifier.height(24.dp))

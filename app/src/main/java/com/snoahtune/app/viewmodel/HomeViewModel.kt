@@ -19,6 +19,10 @@ enum class SortOrder {
     ARTIST
 }
 
+enum class HomeFilter {
+    ALL, FAVORITES, RECENT
+}
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: MusicRepository
@@ -33,6 +37,9 @@ class HomeViewModel @Inject constructor(
     private val _sortOrder   = MutableStateFlow(SortOrder.DATE_ADDED_DESC)
     val sortOrder: StateFlow<SortOrder> = _sortOrder
 
+    private val _homeFilter  = MutableStateFlow(HomeFilter.ALL)
+    val homeFilter: StateFlow<HomeFilter> = _homeFilter
+
     private val _albums      = MutableStateFlow<List<Album>>(emptyList())
     val albums: StateFlow<List<Album>> = _albums
 
@@ -42,9 +49,27 @@ class HomeViewModel @Inject constructor(
     private val _playlists   = MutableStateFlow<List<PlaylistEntity>>(emptyList())
     val playlists: StateFlow<List<PlaylistEntity>> = _playlists
 
+    private val favoriteSongIds: StateFlow<Set<Long>> =
+        repository.getFavoriteSongs()
+            .map { songs -> songs.map { it.id }.toSet() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    private val recentSongIds: StateFlow<Set<Long>> =
+        repository.getRecentlyPlayed(100)
+            .map { songs -> songs.map { it.id }.toSet() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
     val filteredSongs: StateFlow<List<Song>> =
-        combine(_allSongs, _searchQuery, _sortOrder) { songs, query, sort ->
+        combine(_allSongs, _searchQuery, _sortOrder, _homeFilter, favoriteSongIds, recentSongIds) {
+                songs, query, sort, filter, favoriteIds, recentIds ->
             songs
+                .filter { song ->
+                    when (filter) {
+                        HomeFilter.ALL -> true
+                        HomeFilter.FAVORITES -> song.id in favoriteIds
+                        HomeFilter.RECENT -> song.id in recentIds
+                    }
+                }
                 .filter { song ->
                     query.isBlank() ||
                         song.title.contains(query, true) ||
@@ -99,6 +124,7 @@ class HomeViewModel @Inject constructor(
 
     fun setSearchQuery(q: String) { _searchQuery.value = q }
     fun setSortOrder(s: SortOrder) { _sortOrder.value = s }
+    fun setHomeFilter(filter: HomeFilter) { _homeFilter.value = filter }
 
     // ── Playlist operations ─────────────────────────────────────
     fun createPlaylist(name: String) {
@@ -118,4 +144,3 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { repository.renamePlaylist(id, name) }
     }
 }
-
