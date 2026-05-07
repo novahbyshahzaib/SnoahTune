@@ -63,6 +63,7 @@ class PlayerViewModel @Inject constructor(
     val sleepTimerRemainingMs: StateFlow<Long?> = _sleepTimerRemainingMs
 
     private var sleepTimerJob: Job? = null
+    private var sleepTimerGeneration: Long = 0L
 
     fun connectToService() {
         val token = SessionToken(context, ComponentName(context, MusicService::class.java))
@@ -189,6 +190,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun setSleepTimer(minutes: Int?) {
+        sleepTimerGeneration += 1
+        val generation = sleepTimerGeneration
         sleepTimerJob?.cancel()
         sleepTimerJob = null
 
@@ -211,15 +214,40 @@ class PlayerViewModel @Inject constructor(
         }
 
         sleepTimerJob = viewModelScope.launch {
-            val endAt = System.currentTimeMillis() + durationMs
-            while (true) {
-                val remaining = (endAt - System.currentTimeMillis()).coerceAtLeast(0L)
-                _sleepTimerRemainingMs.value = remaining
-                if (remaining <= 0L) break
-                delay(minOf(1000L, remaining))
+            var timedOut = false
+            try {
+                if (minutes == SLEEP_TIMER_END_OF_SONG) {
+                    while (true) {
+                        val p = player ?: break
+                        if (p.duration == C.TIME_UNSET) break
+                        val remaining = (p.duration - p.currentPosition).coerceAtLeast(0L)
+                        _sleepTimerRemainingMs.value = remaining
+                        if (remaining <= 0L) {
+                            timedOut = true
+                            break
+                        }
+                        delay(500)
+                    }
+                } else {
+                    val endAt = System.currentTimeMillis() + durationMs
+                    while (true) {
+                        val remaining = (endAt - System.currentTimeMillis()).coerceAtLeast(0L)
+                        _sleepTimerRemainingMs.value = remaining
+                        if (remaining <= 0L) {
+                            timedOut = true
+                            break
+                        }
+                        delay(minOf(1000L, remaining))
+                    }
+                }
+                if (timedOut) {
+                    player?.pause()
+                }
+            } finally {
+                if (sleepTimerGeneration == generation) {
+                    _sleepTimerRemainingMs.value = null
+                }
             }
-            player?.pause()
-            _sleepTimerRemainingMs.value = null
         }
     }
 
