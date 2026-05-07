@@ -61,7 +61,12 @@ class HomeViewModel @Inject constructor(
 
     val filteredSongs: StateFlow<List<Song>> =
         combine(_allSongs, _searchQuery, _sortOrder, _homeFilter, favoriteSongIds, recentSongIds) {
-                songs, query, sort, filter, favoriteIds, recentIds ->
+                songs: List<Song>,
+                query: String,
+                sort: SortOrder,
+                filter: HomeFilter,
+                favoriteIds: Set<Long>,
+                recentIds: Set<Long> ->
             songs
                 .filter { song ->
                     when (filter) {
@@ -76,7 +81,7 @@ class HomeViewModel @Inject constructor(
                         song.artist.contains(query, true) ||
                         song.album.contains(query, true)
                 }
-                .let { filtered ->
+                .let { filtered: List<Song> ->
                     when (sort) {
                         SortOrder.NAME_ASC        -> filtered.sortedBy { it.title }
                         SortOrder.NAME_DESC       -> filtered.sortedByDescending { it.title }
@@ -87,7 +92,7 @@ class HomeViewModel @Inject constructor(
                         SortOrder.ARTIST          -> filtered.sortedBy { it.artist }
                     }
                 }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList<Song>())
 
     val favoriteSongs: StateFlow<List<Song>> =
         repository.getFavoriteSongs()
