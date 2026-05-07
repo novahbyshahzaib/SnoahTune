@@ -33,6 +33,9 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
     var newPlaylistName by remember { mutableStateOf("") }
     var showNewPlaylist by remember { mutableStateOf(false) }
     var selectedPlaylist by remember { mutableStateOf<PlaylistEntity?>(null) }
+    var renamePlaylistTarget by remember { mutableStateOf<PlaylistEntity?>(null) }
+    var renamePlaylistName by remember { mutableStateOf("") }
+    var showRenamePlaylist by remember { mutableStateOf(false) }
     val playlistWithSongs by remember(selectedPlaylist) {
         selectedPlaylist?.let { homeVM.getPlaylistWithSongs(it.id) }
             ?: kotlinx.coroutines.flow.flowOf(null)
@@ -251,6 +254,18 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                                                 tint = TextSecondary
                                             )
                                         }
+                                        IconButton(
+                                            onClick = {
+                                                renamePlaylistTarget = playlist
+                                                renamePlaylistName = playlist.name
+                                                showRenamePlaylist = true
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Edit, null,
+                                                tint = ElectricBlue
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -302,6 +317,56 @@ fun LibraryScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                 TextButton(onClick = {
                     showNewPlaylist = false
                     newPlaylistName = ""
+                }) {
+                    Text("CANCEL", color = TextSecondary)
+                }
+            }
+        )
+    }
+
+    if (showRenamePlaylist && renamePlaylistTarget != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showRenamePlaylist = false
+                renamePlaylistTarget = null
+                renamePlaylistName = ""
+            },
+            containerColor = SurfaceWhite,
+            title = {
+                Text(
+                    "RENAME PLAYLIST",
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp
+                )
+            },
+            text = {
+                OutlinedTextField(
+                    value = renamePlaylistName,
+                    onValueChange = { renamePlaylistName = it },
+                    label = { Text("Playlist name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val target = renamePlaylistTarget
+                    val trimmed = renamePlaylistName.trim()
+                    if (target != null && trimmed.isNotBlank()) {
+                        homeVM.renamePlaylist(target.id, trimmed)
+                    }
+                    showRenamePlaylist = false
+                    renamePlaylistTarget = null
+                    renamePlaylistName = ""
+                }) {
+                    Text("SAVE", fontWeight = FontWeight.ExtraBold, color = ElectricBlue)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showRenamePlaylist = false
+                    renamePlaylistTarget = null
+                    renamePlaylistName = ""
                 }) {
                     Text("CANCEL", color = TextSecondary)
                 }

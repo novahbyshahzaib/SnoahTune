@@ -15,6 +15,7 @@ import com.snoahtune.app.service.MusicService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -57,6 +58,12 @@ class PlayerViewModel @Inject constructor(
     // Slowed + Reverb: when ON, pitch matches speed (lower pitch = dreamy slowed sound)
     private val _slowedReverbOn = MutableStateFlow(false)
     val slowedReverbOn: StateFlow<Boolean> = _slowedReverbOn
+
+    private val _sleepTimerRemainingMs = MutableStateFlow<Long?>(null)
+    val sleepTimerRemainingMs: StateFlow<Long?> = _sleepTimerRemainingMs
+
+    private var sleepTimerJob: Job? = null
+    private var sleepTimerGeneration: Long = 0L
 
     fun connectToService() {
         val token = SessionToken(context, ComponentName(context, MusicService::class.java))
@@ -182,7 +189,71 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun setSleepTimer(minutes: Int?) {
+        sleepTimerGeneration += 1
+        val generation = sleepTimerGeneration
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+
+        if (minutes == null) {
+            _sleepTimerRemainingMs.value = null
+            return
+        }
+
+        val durationMs = if (minutes == SLEEP_TIMER_END_OF_SONG) {
+            val p = player
+            if (p == null || p.duration == C.TIME_UNSET) null
+            else (p.duration - p.currentPosition).coerceAtLeast(1000L)
+        } else {
+            (minutes * 60_000L).coerceAtLeast(1000L)
+        }
+
+        if (durationMs == null) {
+            _sleepTimerRemainingMs.value = null
+            return
+        }
+
+        sleepTimerJob = viewModelScope.launch {
+            var timedOut = false
+            try {
+                if (minutes == SLEEP_TIMER_END_OF_SONG) {
+                    while (true) {
+                        val p = player ?: break
+                        if (p.duration == C.TIME_UNSET) break
+                        val remaining = (p.duration - p.currentPosition).coerceAtLeast(0L)
+                        _sleepTimerRemainingMs.value = remaining
+                        if (remaining <= 0L) {
+                            timedOut = true
+                            break
+                        }
+                        delay(500)
+                    }
+                } else {
+                    val endAt = System.currentTimeMillis() + durationMs
+                    while (true) {
+                        val remaining = (endAt - System.currentTimeMillis()).coerceAtLeast(0L)
+                        _sleepTimerRemainingMs.value = remaining
+                        if (remaining <= 0L) {
+                            timedOut = true
+                            break
+                        }
+                        delay(minOf(1000L, remaining))
+                    }
+                }
+                if (timedOut) {
+                    player?.pause()
+                }
+            } finally {
+                if (sleepTimerGeneration == generation) {
+                    _sleepTimerRemainingMs.value = null
+                }
+            }
+        }
+    }
+
     companion object {
+        const val SLEEP_TIMER_END_OF_SONG = -1
+
         fun msToString(ms: Long): String {
             val s = ms / 1000
             return "%d:%02d".format(s / 60, s % 60)
