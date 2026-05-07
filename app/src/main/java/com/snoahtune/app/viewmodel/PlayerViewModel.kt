@@ -197,7 +197,7 @@ class PlayerViewModel @Inject constructor(
             return
         }
 
-        val durationMs = if (minutes == -1) {
+        val durationMs = if (minutes == SLEEP_TIMER_END_OF_SONG) {
             val p = player
             if (p == null || p.duration <= 0) null
             else (p.duration - p.currentPosition).coerceAtLeast(1000L)
@@ -211,12 +211,12 @@ class PlayerViewModel @Inject constructor(
         }
 
         sleepTimerJob = viewModelScope.launch {
-            var remaining = durationMs
-            _sleepTimerRemainingMs.value = remaining
-            while (remaining > 0) {
-                delay(1000)
-                remaining -= 1000
-                _sleepTimerRemainingMs.value = remaining.coerceAtLeast(0)
+            val endAt = System.currentTimeMillis() + durationMs
+            while (true) {
+                val remaining = (endAt - System.currentTimeMillis()).coerceAtLeast(0L)
+                _sleepTimerRemainingMs.value = remaining
+                if (remaining <= 0L) break
+                delay(minOf(1000L, remaining))
             }
             if (_isPlaying.value) {
                 player?.pause()
@@ -226,6 +226,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     companion object {
+        const val SLEEP_TIMER_END_OF_SONG = -1
+
         fun msToString(ms: Long): String {
             val s = ms / 1000
             return "%d:%02d".format(s / 60, s % 60)

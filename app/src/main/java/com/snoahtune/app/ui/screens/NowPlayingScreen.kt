@@ -395,7 +395,7 @@ fun NowPlayingScreen(
                     "15 MINUTES" to 15,
                     "30 MINUTES" to 30,
                     "45 MINUTES" to 45,
-                    "END OF SONG" to -1
+                    "END OF SONG" to PlayerViewModel.SLEEP_TIMER_END_OF_SONG
                 ).forEach { (label, minutes) ->
                     TextButton(
                         onClick = {
