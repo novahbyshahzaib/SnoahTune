@@ -199,7 +199,7 @@ class PlayerViewModel @Inject constructor(
 
         val durationMs = if (minutes == SLEEP_TIMER_END_OF_SONG) {
             val p = player
-            if (p == null || p.duration <= 0) null
+            if (p == null || p.duration == C.TIME_UNSET) null
             else (p.duration - p.currentPosition).coerceAtLeast(1000L)
         } else {
             (minutes * 60_000L).coerceAtLeast(1000L)
@@ -218,9 +218,7 @@ class PlayerViewModel @Inject constructor(
                 if (remaining <= 0L) break
                 delay(minOf(1000L, remaining))
             }
-            if (_isPlaying.value) {
-                player?.pause()
-            }
+            player?.pause()
             _sleepTimerRemainingMs.value = null
         }
     }

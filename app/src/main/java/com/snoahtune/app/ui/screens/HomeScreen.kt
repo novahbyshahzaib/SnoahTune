@@ -183,7 +183,11 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { playerVM.playSong(songs.first(), songs) },
+                    onClick = {
+                        songs.firstOrNull()?.let { first ->
+                            playerVM.playSong(first, songs)
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = ElectricYellow)
                 ) {
@@ -194,7 +198,9 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                 Button(
                     onClick = {
                         val shuffled = songs.shuffled()
-                        playerVM.playSong(shuffled.first(), shuffled)
+                        shuffled.firstOrNull()?.let { first ->
+                            playerVM.playSong(first, shuffled)
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = ElectricBlue)
