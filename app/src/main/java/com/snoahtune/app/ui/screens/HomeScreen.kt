@@ -224,6 +224,7 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
             }
             }
         }
+        } // Close AnimatedVisibility
 
         // Song List
         when {
