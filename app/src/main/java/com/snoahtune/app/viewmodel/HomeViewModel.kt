@@ -60,13 +60,14 @@ class HomeViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val filteredSongs: StateFlow<List<Song>> =
-        combine(_allSongs, _searchQuery, _sortOrder, _homeFilter, favoriteSongIds, recentSongIds) {
-                songs: List<Song>,
-                query: String,
-                sort: SortOrder,
-                filter: HomeFilter,
-                favoriteIds: Set<Long>,
-                recentIds: Set<Long> ->
+        combine(
+            combine(_allSongs, _searchQuery, _sortOrder) { songs, query, sort ->
+                Triple(songs, query, sort)
+            },
+            combine(_homeFilter, favoriteSongIds, recentSongIds) { filter, favIds, recIds ->
+                Triple(filter, favIds, recIds)
+            }
+        ) { (songs, query, sort), (filter, favoriteIds, recentIds) ->
             songs
                 .filter { song ->
                     when (filter) {
