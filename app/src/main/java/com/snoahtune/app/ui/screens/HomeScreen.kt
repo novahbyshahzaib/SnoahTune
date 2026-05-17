@@ -41,6 +41,7 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
     var songForPlaylist  by remember { mutableStateOf<Song?>(null) }
     var newPlaylistName  by remember { mutableStateOf("") }
     var showNewPlaylist  by remember { mutableStateOf(false) }
+    var isHeaderExpanded by remember { mutableStateOf(query.isNotEmpty()) }
 
     Column(Modifier.fillMaxSize().background(Background)) {
 
@@ -57,12 +58,23 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
             Text("SNOAHTUNE",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold)
-            IconButton(onClick = { homeVM.refreshSongs() }) {
-                Icon(Icons.Default.Refresh, "Refresh", tint = BorderBlack)
+            Row {
+                IconButton(onClick = { isHeaderExpanded = !isHeaderExpanded }) {
+                    Icon(
+                        imageVector = if (isHeaderExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Toggle Header",
+                        tint = BorderBlack
+                    )
+                }
+                IconButton(onClick = { homeVM.refreshSongs() }) {
+                    Icon(Icons.Default.Refresh, "Refresh", tint = BorderBlack)
+                }
             }
         }
 
-        // Search Bar
+        androidx.compose.animation.AnimatedVisibility(visible = isHeaderExpanded) {
+            Column {
+                // Search Bar
         Row(
             Modifier
                 .fillMaxWidth()
@@ -209,6 +221,7 @@ fun HomeScreen(homeVM: HomeViewModel, playerVM: PlayerViewModel) {
                     Spacer(Modifier.width(6.dp))
                     Text("SHUFFLE", color = SurfaceWhite, fontWeight = FontWeight.ExtraBold)
                 }
+            }
             }
         }
 
